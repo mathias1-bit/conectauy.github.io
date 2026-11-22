@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConectaUY | Servicios al Hogar y Digitales Verificados</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Notificación Toast Global (Reemplazo seguro de alert/confirm) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Navbar Principal -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchTab('explore')">
+                    <div class="bg-brand-600 text-white p-2 rounded-xl shadow-sm">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold tracking-tight text-slate-900">Conecta<span class="text-brand-600">UY</span></span>
+                        <span class="hidden sm:inline-block ml-2 text-[11px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">Hogar & Digital</span>
+                    </div>
+                </div>
+
+                <!-- Navegación Desktop -->
+                <nav class="hidden md:flex items-center gap-1">
+                    <button onclick="switchTab('explore')" id="nav-explore" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50 transition">
+                        Explorar Solicitudes
+                    </button>
+                    <button onclick="switchTab('providers')" id="nav-providers" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                        Directorio de Profesionales
+                    </button>
+                    <button onclick="openNewRequestModal()" class="ml-2 px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700 shadow-sm transition flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        Publicar Solicitud Gratis
+                    </button>
+                </nav>
+
+                <!-- Área de Usuario / Auth -->
+                <div class="flex items-center gap-2 sm:gap-3" id="auth-header-area">
+                    <!-- Se renderiza dinámicamente según estado de sesión -->
+                    <button onclick="openAuthModal('login')" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition">
+                        Ingresar
+                    </button>
+                    <button onclick="openAuthModal('register')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm">
+                        Crear Cuenta
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra móvil secundaria -->
+        <div class="md:hidden border-t border-slate-100 bg-slate-50/90 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto">
+            <button onclick="switchTab('explore')" class="text-xs font-semibold text-brand-700 bg-brand-100/70 px-3 py-1.5 rounded-lg whitespace-nowrap">
+                Solicitudes
+            </button>
+            <button onclick="switchTab('providers')" class="text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
+                Profesionales
+            </button>
+            <button onclick="openNewRequestModal()" class="text-xs font-semibold text-white bg-brand-600 px-3 py-1.5 rounded-lg whitespace-nowrap flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Pedir Servicio
+            </button>
+        </div>
+    </header>
+
+    <!-- Banner de Estado de Usuario / Billetera (Visible cuando hay sesión activa) -->
+    <div id="user-dashboard-bar" class="hidden bg-slate-900 text-white border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div id="user-avatar-badge" class="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center font-bold text-sm">
+                    U
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="user-display-name" class="font-semibold text-sm">Usuario</span>
+                        <span id="user-role-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-brand-300 border border-slate-700">Cliente</span>
+                        <span id="user-kyc-badge" class="hidden text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700 flex items-center gap-1">
+                            <i data-lucide="badge-check" class="w-3 h-3"></i> Identidad Verificada
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400" id="user-sub-info">Conectado de forma segura</p>
+                </div>
+            </div>
+
+            <!-- Controles rápidos según rol -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Solo visible para Prestadores -->
+                <div id="provider-wallet-controls" class="hidden flex items-center gap-2">
+                    <div class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                        <i data-lucide="coins" class="w-4 h-4 text-amber-400"></i>
+                        <span class="text-xs text-slate-300">Saldo:</span>
+                        <span id="wallet-credits-count" class="text-sm font-bold text-amber-400">0 créditos</span>
+                        <span id="wallet-pro-badge" class="hidden text-[10px] font-bold uppercase bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">PRO</span>
+                    </div>
+                    <button onclick="openCreditsModal()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition flex items-center gap-1 shadow-sm">
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i> Recargar / Plan Pro
+                    </button>
+                </div>
+
+                <button onclick="switchTab('profile')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                    <i data-lucide="user-cog" class="w-3.5 h-3.5"></i> Mi Perfil y Privacidad
+                </button>
+                <button onclick="handleLogout()" class="px-3 py-1.5 rounded-xl text-xs font-medium text-rose-300 hover:bg-rose-950/50 transition">
+                    Salir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+        <!-- SECCIÓN 1: EXPLORADOR DE SOLICITUDES DE SERVICIOS -->
+        <section id="tab-explore" class="space-y-6">
+            <!-- Hero Compacto con Aviso de Modelo Directo -->
+            <div class="bg-gradient-to-br from-brand-900 via-brand-800 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+                <div class="max-w-3xl relative z-10 space-y-3">
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-brand-100">
+                        <i data-lucide="handshake" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        Conexión directa sin comisiones sobre el precio del servicio
+                    </div>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                        Resolvelo hoy: profesionales para tu hogar y proyectos digitales
+                    </h1>
+                    <p class="text-sm sm:text-base text-brand-100/90 max-w-2xl">
+                        Publicá gratis lo que necesitás. Los prestadores verificados desbloquean tu contacto y coordinan directamente con vos por WhatsApp, sin intermediarios en el pago.
+                    </p>
+                    <div class="pt-2 flex flex-wrap gap-3">
+                        <button onclick="openNewRequestModal()" class="px-5 py-2.5 rounded-xl bg-white text-brand-900 font-bold text-sm hover:bg-brand-50 transition shadow-md flex items-center gap-2">
+                            <i data-lucide="megaphone" class="w-4 h-4"></i> Publicar Necesidad Gratis
+                        </button>
+                        <button onclick="openAuthModal('register', 'provider')" class="px-5 py-2.5 rounded-xl bg-brand-700/70 hover:bg-brand-700 text-white border border-brand-500/40 font-semibold text-sm transition flex items-center gap-2">
+                            <i data-lucide="briefcase" class="w-4 h-4"></i> Soy Prestador de Servicios
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra de Filtros -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <!-- Búsqueda por texto -->
+                    <div class="md:col-span-2 relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                        <input type="text" id="filter-search" oninput="renderRequests()" placeholder="Buscar plomero, diseño web, limpieza, flete..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                    </div>
+
+                    <!-- Filtro Tipo de Servicio -->
+                    <div>
+                        <select id="filter-type" onchange="renderRequests()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="all">Todos los rubros (Hogar y Digital)</option>
+                            <option value="hogar">🏠 Servicios al Hogar (Físicos)</option>
+                            <option value="digital">💻 Servicios Digitales (Remotos)</option>
+                        </select>
+                    </div>
+
+                    <!-- Filtro Zona / Departamento -->
+                    <div>
+                        <select id="filter-location" onchange="renderRequests()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="all">Todas las ubicaciones</option>
+                            <option value="Montevideo">Montevideo</option>
+                            <option value="Canelones">Canelones / Ciudad de la Costa</option>
+                            <option value="Maldonado">Maldonado / Punta del Este</option>
+                            <option value="Interior">Resto del País</option>
+                            <option value="Remoto">Remoto / Online</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Pills de categorías rápidas -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                    <span class="text-slate-400 font-medium whitespace-nowrap">Categorías:</span>
+                    <button onclick="setQuickCategory('')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-900 text-white font-medium whitespace-nowrap">Todas</button>
+                    <button onclick="setQuickCategory('Plomería')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">🔧 Plomería</button>
+                    <button onclick="setQuickCategory('Electricidad')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">⚡ Electricidad</button>
+                    <button onclick="setQuickCategory('Limpieza')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">🧹 Limpieza</button>
+                    <button onclick="setQuickCategory('Fletes')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">🚚 Fletes</button>
+                    <button onclick="setQuickCategory('Desarrollo Web')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">🌐 Desarrollo Web</button>
+                    <button onclick="setQuickCategory('Diseño Gráfico')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">🎨 Diseño Gráfico</button>
+                    <button onclick="setQuickCategory('Marketing')" class="cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap">📈 Marketing Digital</button>
+                </div>
+            </div>
+
+            <!-- Listado de Solicitudes -->
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    Solicitudes de Clientes Recientes
+                    <span id="requests-counter" class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full">0</span>
+                </h2>
+                <span class="text-xs text-slate-500 hidden sm:inline">Los datos de contacto están protegidos hasta que un prestador use 1 crédito</span>
+            </div>
+
+            <div id="requests-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Tarjetas generadas dinámicamente -->
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: DIRECTORIO DE PROFESIONALES Y RESEÑAS -->
+        <section id="tab-providers" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Directorio de Prestadores Verificados</h2>
+                    <p class="text-sm text-slate-600">Profesionales y técnicos evaluados por la comunidad. Verificá su insignia de identidad antes de coordinar.</p>
+                </div>
+                <button onclick="openAuthModal('register', 'provider')" class="px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition whitespace-nowrap">
+                    Sumarme como Prestador
+                </button>
+            </div>
+
+            <div id="providers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Tarjetas de profesionales -->
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: PERFIL, SEGURIDAD, KYC Y PRIVACIDAD (LEY 18.331) -->
+        <section id="tab-profile" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columna Izquierda: Datos de Cuenta y Verificación -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900">Mi Cuenta y Seguridad</h2>
+                                <p class="text-xs text-slate-500">Gestioná tu perfil, rol y verificaciones de confianza</p>
+                            </div>
+                            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg" id="profile-uid-display">ID: ---</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
+                                <span class="text-xs text-slate-400 block">Nombre / Razón Social</span>
+                                <span class="font-semibold text-slate-900" id="profile-name-val">-</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
+                                <span class="text-xs text-slate-400 block">Correo Electrónico</span>
+                                <span class="font-semibold text-slate-900" id="profile-email-val">-</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
+                                <span class="text-xs text-slate-400 block">Tipo de Cuenta</span>
+                                <span class="font-semibold text-brand-700" id="profile-role-val">-</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
+                                <span class="text-xs text-slate-400 block">Verificación Teléfono (OTP)</span>
+                                <div class="flex items-center justify-between mt-0.5">
+                                    <span class="font-semibold text-slate-800" id="profile-phone-val">No verificado</span>
+                                    <button onclick="openPhoneVerifyModal()" id="btn-verify-phone" class="text-xs font-semibold text-brand-600 hover:underline">Verificar SMS</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Verificación de Identidad (KYC) para Prestadores -->
+                        <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
+                            <div class="flex items-start gap-3">
+                                <div class="p-2 bg-amber-100 text-amber-700 rounded-lg">
+                                    <i data-lucide="scan-face" class="w-5 h-5"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-bold text-slate-900">Verificación de Identidad (Cédula / Documento)</h3>
+                                    <p class="text-xs text-slate-600 mt-0.5">
+                                        Para servicios al hogar, los clientes priorizan prestadores con identidad validada. Tu documento se almacena cifrado y nunca se muestra públicamente.
+                                    </p>
+                                </div>
+                            </div>
+                            <div id="kyc-action-area" class="flex flex-wrap items-center gap-3 pt-1">
+                                <input type="text" id="kyc-doc-number" placeholder="N.º Cédula (ej. 4.123.456-7)" class="px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <button onclick="submitKycVerification()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition">
+                                    Validar Identidad Ahora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historial de Contactos Desbloqueados (Para Prestadores) -->
+                    <div id="unlocked-history-card" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="unlock" class="w-4 h-4 text-brand-600"></i>
+                            Contactos Desbloqueados por Mí
+                        </h3>
+                        <div id="unlocked-list" class="space-y-2.5 text-sm text-slate-600">
+                            <p class="text-xs text-slate-400">Aún no has desbloqueado datos de contacto de clientes.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Derechos ARCO y Protección de Datos (Ley 18.331) -->
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center gap-2 text-emerald-700">
+                            <i data-lucide="lock" class="w-5 h-5"></i>
+                            <h3 class="text-base font-bold text-slate-900">Protección de Datos (Ley N.º 18.331)</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            En cumplimiento con la normativa de Protección de Datos Personales de Uruguay (URCDP), tenés control total sobre tu información personal (Derechos ARCO: Acceso, Rectificación, Cancelación y Oposición).
+                        </p>
+
+                        <div class="space-y-2.5 pt-2">
+                            <button onclick="exportUserData()" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition flex items-center justify-center gap-2">
+                                <i data-lucide="download" class="w-4 h-4"></i> Descargar Copia de Mis Datos (JSON)
+                            </button>
+                            <button onclick="openLegalModal('privacy')" class="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-2">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> Leer Política de Privacidad
+                            </button>
+                            <button onclick="openDeleteAccountModal()" class="w-full py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition flex items-center justify-center gap-2">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar Mi Cuenta y Datos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resumen de Deslinde Legal -->
+                    <div class="bg-slate-900 text-slate-300 p-5 rounded-2xl space-y-2.5">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                            <i data-lucide="scale" class="w-4 h-4 text-brand-400"></i> Transparencia de Intermediación
+                        </h4>
+                        <p class="text-xs leading-relaxed text-slate-400">
+                            ConectaUY actúa exclusivamente como plataforma tecnológica de contacto. No procesamos pagos entre clientes y prestadores ni existe relación de dependencia laboral.
+                        </p>
+                        <button onclick="openLegalModal('terms')" class="text-xs font-semibold text-brand-400 hover:text-brand-300 underline">
+                            Ver Términos y Deslinde Completo →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer con Cumplimiento Legal y Seguridad -->
+    <footer class="bg-white border-t border-slate-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-100">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-brand-600"></i>
+                        <span class="font-bold text-slate-900">ConectaUY</span>
+                    </div>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Directorio inteligente que conecta necesidades del hogar y proyectos digitales con prestadores independientes en todo Uruguay.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900">Marco Legal y Seguridad</h4>
+                    <ul class="space-y-1.5 text-xs text-slate-600">
+                        <li><button onclick="openLegalModal('terms')" class="hover:text-brand-600 transition">Términos y Condiciones (Deslinde de Responsabilidad)</button></li>
+                        <li><button onclick="openLegalModal('privacy')" class="hover:text-brand-600 transition">Política de Privacidad y Protección de Datos (Ley N.º 18.331)</button></li>
+                        <li><button onclick="openLegalModal('safety')" class="hover:text-brand-600 transition">Guía de Seguridad para Servicios a Domicilio</button></li>
+                    </ul>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900">Infraestructura Protegida</h4>
+                    <div class="flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
+                        <span class="px-2.5 py-1 bg-slate-100 rounded-lg flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3 text-emerald-600"></i> Cifrado TLS/HTTPS</span>
+                        <span class="px-2.5 py-1 bg-slate-100 rounded-lg flex items-center gap-1"><i data-lucide="database" class="w-3 h-3 text-brand-600"></i> Registro URCDP</span>
+                        <span class="px-2.5 py-1 bg-slate-100 rounded-lg flex items-center gap-1"><i data-lucide="credit-card" class="w-3 h-3 text-sky-600"></i> Pagos Web Seguros</span>
+                    </div>
+                </div>
+            </div>
+            <div class="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+                <p>© 2026 ConectaUY. Plataforma de intermediación tecnológica. Todos los derechos reservados.</p>
+                <p>Montevideo, Uruguay • Cumplimiento Ley N.º 17.250 y N.º 18.331</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Banner de Consentimiento de Cookies / Privacidad -->
+    <div id="cookie-banner" class="fixed bottom-4 left-4 right-4 max-w-4xl mx-auto bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 z-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-xs text-slate-300 leading-relaxed">
+            <strong class="text-white">Privacidad y Seguridad:</strong> Utilizamos cookies técnicas esenciales para mantener tu sesión segura y proteger el acceso a datos de contacto conforme a la Ley N.º 18.331.
+            <button onclick="openLegalModal('privacy')" class="underline text-brand-400 ml-1">Más info</button>.
+        </div>
+        <button onclick="acceptCookies()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold whitespace-nowrap transition">
+            Entendido y Aceptar
+        </button>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODALES INTERACTIVOS                                                  -->
+    <!-- ===================================================================== -->
+
+    <!-- 1. MODAL DE AUTENTICACIÓN (LOGIN / REGISTRO CON SEGURIDAD Y CONSENTIMIENTO) -->
+    <div id="modal-auth" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 my-8">
+            <div class="flex items-center justify-between">
+                <h3 id="auth-modal-title" class="text-xl font-bold text-slate-900">Crear Cuenta Segura</h3>
+                <button onclick="closeModal('modal-auth')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Tabs Login / Registro -->
+            <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                <button type="button" onclick="setAuthMode('login')" id="tab-btn-login" class="py-2 rounded-lg text-slate-600 transition">Iniciar Sesión</button>
+                <button type="button" onclick="setAuthMode('register')" id="tab-btn-register" class="py-2 rounded-lg bg-white text-slate-900 shadow-sm transition">Registrarme</button>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3.5">
+                <!-- Campos exclusivos de Registro -->
+                <div id="register-fields" class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">¿Cómo vas a usar ConectaUY?</label>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="role" value="client" checked class="peer sr-only" onchange="toggleProviderFields()">
+                                <div class="p-3 rounded-xl border border-slate-200 peer-checked:border-brand-600 peer-checked:bg-brand-50/70 text-center transition">
+                                    <span class="block text-sm font-bold text-slate-900">Soy Cliente</span>
+                                    <span class="text-[11px] text-slate-500">Busco servicios</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="role" value="provider" class="peer sr-only" onchange="toggleProviderFields()">
+                                <div class="p-3 rounded-xl border border-slate-200 peer-checked:border-brand-600 peer-checked:bg-brand-50/70 text-center transition">
+                                    <span class="block text-sm font-bold text-slate-900">Soy Prestador</span>
+                                    <span class="text-[11px] text-slate-500">Ofrezco servicios</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre completo o Empresa</label>
+                        <input type="text" id="auth-name" placeholder="Ej. Martín Gómez / Soluciones MG" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+
+                    <!-- Campos extra si elige ser Prestador -->
+                    <div id="provider-extra-fields" class="hidden space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Especialidad Principal</label>
+                            <select id="auth-specialty" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
+                                <option value="Plomería y Sanitaria">Plomería y Sanitaria (Hogar)</option>
+                                <option value="Electricidad">Electricidad (Hogar)</option>
+                                <option value="Limpieza y Mantenimiento">Limpieza y Mantenimiento (Hogar)</option>
+                                <option value="Albañilería y Pintura">Albañilería y Pintura (Hogar)</option>
+                                <option value="Fletes y Mudanzas">Fletes y Mudanzas (Hogar)</option>
+                                <option value="Desarrollo Web y Apps">Desarrollo Web y Apps (Digital)</option>
+                                <option value="Diseño Gráfico y Branding">Diseño Gráfico y Branding (Digital)</option>
+                                <option value="Marketing y Redes">Marketing y Redes Sociales (Digital)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zona de cobertura</label>
+                            <select id="auth-zone" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
+                                <option value="Montevideo">Montevideo</option>
+                                <option value="Canelones">Canelones / Ciudad de la Costa</option>
+                                <option value="Maldonado">Maldonado / Punta del Este</option>
+                                <option value="Todo el país / Remoto">Todo el país / Remoto</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Correo electrónico</label>
+                    <input type="email" id="auth-email" required placeholder="tu@correo.com" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña segura</label>
+                    <input type="password" id="auth-password" required oninput="checkPasswordStrength(this.value)" placeholder="Mín. 8 caracteres, 1 mayúscula y 1 número" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <!-- Indicador de fortaleza de contraseña -->
+                    <div id="password-strength-box" class="mt-1.5 space-y-1">
+                        <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div id="password-strength-bar" class="h-full w-0 bg-rose-500 transition-all duration-300"></div>
+                        </div>
+                        <p id="password-strength-text" class="text-[11px] text-slate-400">Requisitos: 8+ caracteres, mayúscula, número y símbolo.</p>
+                    </div>
+                </div>
+
+                <!-- Consentimiento Legal Obligatorio (Ley 18.331 y Deslinde) -->
+                <div id="legal-consent-box" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <label class="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" id="auth-consent" class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span class="text-[11px] text-slate-600 leading-snug">
+                            Acepto los <button type="button" onclick="openLegalModal('terms')" class="text-brand-600 font-semibold underline">Términos y Deslinde de Responsabilidad</button> y autorizo el tratamiento de mis datos conforme a la <button type="button" onclick="openLegalModal('privacy')" class="text-brand-600 font-semibold underline">Política de Privacidad (Ley N.º 18.331)</button>.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition">
+                    Crear Cuenta Segura
+                </button>
+            </form>
+
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-slate-200"></div>
+                <span class="flex-shrink mx-3 text-xs text-slate-400">o continuá con</span>
+                <div class="flex-grow border-t border-slate-200"></div>
+            </div>
+
+            <button type="button" onclick="handleGoogleSignIn()" class="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center justify-center gap-2 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"/><path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"/></svg>
+                Continuar con Google
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. MODAL PUBLICAR SOLICITUD DE SERVICIO (PARA CLIENTES) -->
+    <div id="modal-new-request" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Publicar Solicitud de Servicio</h3>
+                    <p class="text-xs text-slate-500">100% gratis para clientes. Tu teléfono solo se muestra a prestadores interesados.</p>
+                </div>
+                <button onclick="closeModal('modal-new-request')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form onsubmit="handleCreateRequest(event)" class="space-y-3.5">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo de Servicio</label>
+                        <select id="req-type" onchange="updateCategoryOptions()" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50">
+                            <option value="hogar">🏠 Servicio al Hogar</option>
+                            <option value="digital">💻 Servicio Digital</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Categoría</label>
+                        <select id="req-category" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50">
+                            <option value="Plomería">Plomería</option>
+                            <option value="Electricidad">Electricidad</option>
+                            <option value="Limpieza">Limpieza</option>
+                            <option value="Albañilería">Albañilería</option>
+                            <option value="Fletes">Fletes</option>
+                            <option value="Cerrajería">Cerrajería</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Título breve de lo que necesitás</label>
+                    <input type="text" id="req-title" required maxlength="80" placeholder="Ej. Reparar pérdida de agua en cocina / Diseño de logo" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Detalle del trabajo</label>
+                    <textarea id="req-desc" required rows="3" maxlength="400" placeholder="Explicá qué hay que hacer, urgencia y horarios disponibles..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Departamento / Modalidad</label>
+                        <select id="req-location" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50">
+                            <option value="Montevideo">Montevideo</option>
+                            <option value="Canelones">Canelones</option>
+                            <option value="Maldonado">Maldonado</option>
+                            <option value="Interior">Interior</option>
+                            <option value="Remoto">Remoto / Online</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Presupuesto estimado (UYU)</label>
+                        <input type="text" id="req-budget" placeholder="Ej. $ 2.500 o A convenir" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp o Teléfono de contacto (Protegido)</label>
+                    <input type="tel" id="req-phone" required placeholder="Ej. 099 123 456" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                        <i data-lucide="eye-off" class="w-3 h-3"></i> Oculto al público. Solo visible para prestadores que usen sus créditos.
+                    </p>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-new-request')" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm">
+                        Publicar Solicitud
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. MODAL RECARGA DE CRÉDITOS Y SUSCRIPCIÓN PRO (MONETIZACIÓN PRESTADORES) -->
+    <div id="modal-credits" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-6 my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">Billetera de Prestador</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-1">Conseguí más clientes sin pagar comisiones por trabajo</h3>
+                    <p class="text-xs text-slate-500">1 crédito = 1 contacto directo desbloqueado (WhatsApp + teléfono). El 100% de lo que cobrás al cliente es tuyo.</p>
+                </div>
+                <button onclick="closeModal('modal-credits')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Plan 1: Pack Inicial -->
+                <div class="border border-slate-200 rounded-2xl p-5 flex flex-col justify-between hover:border-brand-400 transition">
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase">Pack Inicial</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-extrabold text-slate-900">$ 390</span>
+                            <span class="text-xs text-slate-500">UYU</span>
+                        </div>
+                        <p class="text-sm font-semibold text-brand-600">5 Créditos de contacto</p>
+                        <ul class="text-xs text-slate-600 space-y-1.5 pt-2">
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> $78 UYU por cliente potencial</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Los créditos no vencen</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Contacto directo por WhatsApp</li>
+                        </ul>
+                    </div>
+                    <button onclick="processCheckout('Pack Inicial (5 Créditos)', 390, 5, false)" class="mt-5 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+                        Pagar con Mercado Pago
+                    </button>
+                </div>
+
+                <!-- Plan 2: Pack Profesional -->
+                <div class="border-2 border-brand-600 rounded-2xl p-5 flex flex-col justify-between bg-brand-50/30 relative shadow-md">
+                    <span class="absolute -top-3 right-4 bg-brand-600 text-white text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full">Más Elegido</span>
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-brand-700 uppercase">Pack Profesional</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-extrabold text-slate-900">$ 890</span>
+                            <span class="text-xs text-slate-500">UYU</span>
+                        </div>
+                        <p class="text-sm font-semibold text-brand-700">15 Créditos de contacto</p>
+                        <ul class="text-xs text-slate-600 space-y-1.5 pt-2">
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Ahorrás 24% ($59 UYU/lead)</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Perfil destacado en directorio</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Créditos sin vencimiento</li>
+                        </ul>
+                    </div>
+                    <button onclick="processCheckout('Pack Profesional (15 Créditos)', 890, 15, false)" class="mt-5 w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition shadow-sm">
+                        Pagar con Mercado Pago
+                    </button>
+                </div>
+
+                <!-- Plan 3: Membresía Pro Ilimitada -->
+                <div class="border border-amber-300 bg-amber-50/40 rounded-2xl p-5 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-amber-700 uppercase">Membresía Mensual PRO</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-extrabold text-slate-900">$ 1.490</span>
+                            <span class="text-xs text-slate-500">UYU / mes</span>
+                        </div>
+                        <p class="text-sm font-semibold text-amber-700">Contactos Ilimitados (30 días)</p>
+                        <ul class="text-xs text-slate-600 space-y-1.5 pt-2">
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Desbloqueo libre sin gastar créditos</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Insignia PRO y top en búsquedas</li>
+                            <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> Cancelás cuando quieras</li>
+                        </ul>
+                    </div>
+                    <button onclick="processCheckout('Membresía Mensual PRO', 1490, 0, true)" class="mt-5 w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">
+                        Activar Plan PRO
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nota técnica de pasarela web -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs text-slate-600">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="shield" class="w-4 h-4 text-sky-600 shrink-0"></i>
+                    <span>Procesamiento seguro vía Web Checkout (Mercado Pago / Tarjetas locales). No almacenamos datos de tu tarjeta en nuestros servidores (Cumplimiento PCI-DSS).</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MODAL DOCUMENTACIÓN LEGAL (TÉRMINOS, DESLINDE Y PRIVACIDAD LEY 18.331) -->
+    <div id="modal-legal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 my-8 max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <h3 id="legal-modal-title" class="text-lg font-bold text-slate-900">Marco Legal</h3>
+                <button onclick="closeModal('modal-legal')" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="legal-modal-body" class="overflow-y-auto pr-2 text-xs text-slate-600 space-y-3 leading-relaxed">
+                <!-- Contenido legal inyectado dinámicamente -->
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex justify-end shrink-0">
+                <button onclick="closeModal('modal-legal')" class="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL VERIFICACIÓN SMS (OTP) -->
+    <div id="modal-phone" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Verificar Celular por SMS</h3>
+                <button onclick="closeModal('modal-phone')" class="p-1 text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <p class="text-xs text-slate-600">Ingresá tu número móvil de Uruguay para validar tu cuenta y prevenir perfiles falsos.</p>
+            <input type="tel" id="phone-input-verify" placeholder="099 123 456" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm">
+            <div id="otp-step-2" class="hidden space-y-2">
+                <p class="text-xs text-emerald-700 font-medium">Código enviado (Demo: usá <strong>123456</strong>)</p>
+                <input type="text" id="otp-code-input" maxlength="6" placeholder="Código de 6 dígitos" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm tracking-widest text-center font-bold">
+            </div>
+            <button onclick="handlePhoneVerificationStep()" id="btn-phone-step" class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-xs font-semibold">
+                Enviar Código SMS
+            </button>
+        </div>
+    </div>
+
+    <!-- 6. MODAL ELIMINACIÓN DE CUENTA (DERECHO DE SUPRESIÓN LEY 18.331) -->
+    <div id="modal-delete-account" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div class="flex items-center gap-2 text-rose-600">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                <h3 class="text-lg font-bold text-slate-900">Eliminar Cuenta y Datos Personales</h3>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Esta acción es irreversible. Conforme al Art. 15 de la Ley N.º 18.331, se eliminarán permanentemente tu perfil, historial y datos personales de nuestra base de datos activa.
+            </p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-delete-account')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button onclick="executeAccountDeletion()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">
+                    Sí, Eliminar Definitivamente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- LÓGICA DE APLICACIÓN + FIREBASE (AUTH & FIRESTORE)                    -->
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut,
+            onAuthStateChanged,
+            deleteUser
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            updateDoc,
+            deleteDoc,
+            addDoc,
+            collection,
+            onSnapshot,
+            arrayUnion,
+            increment
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración Firebase proporcionada por el entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'conectauy-marketplace';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let app = null;
+        let auth = null;
+        let db = null;
+        let isFirebaseReady = false;
+
+        // Estado global de la aplicación
+        const state = {
+            currentUser: null,       // Objeto Auth de Firebase
+            userProfile: null,       // Documento en Firestore (/artifacts/{appId}/users/{uid}/profile/main)
+            requests: [],            // Solicitudes de servicios públicas
+            providers: [],           // Directorio de prestadores públicos
+            quickCategory: '',
+            authMode: 'register',
+            phoneVerifyStep: 1
+        };
+
+        // Datos iniciales de ejemplo (Seed) para que la plataforma luzca activa desde el inicio
+        const SEED_REQUESTS = [
+            {
+                id: 'seed-1',
+                type: 'hogar',
+                category: 'Plomería',
+                title: 'Pérdida de agua debajo de pileta de cocina',
+                description: 'Necesito sanitario para revisar sifón y flexible que pierde agua en apartamento en Pocitos. Disponibilidad por la tarde.',
+                location: 'Montevideo',
+                budget: '$ 1.800 UYU',
+                phone: '099 452 810',
+                clientName: 'Carolina S.',
+                createdAt: Date.now() - 3600000 * 2
+            },
+            {
+                id: 'seed-2',
+                type: 'digital',
+                category: 'Desarrollo Web',
+                title: 'Landing page autoadministrable para estudio contable',
+                description: 'Buscamos desarrollador web para crear sitio moderno con formulario de contacto, integración WhatsApp y SEO básico.',
+                location: 'Remoto',
+                budget: '$ 14.000 UYU',
+                phone: '098 711 204',
+                clientName: 'Estudio Pérez & Asoc.',
+                createdAt: Date.now() - 3600000 * 5
+            },
+            {
+                id: 'seed-3',
+                type: 'hogar',
+                category: 'Electricidad',
+                title: 'Instalación de llave térmica y 3 tomas exteriores',
+                description: 'Casa en Solymar, necesito electricista matriculado para agregar circuito independiente en barbacoa.',
+                location: 'Canelones',
+                budget: '$ 3.500 UYU',
+                phone: '094 330 912',
+                clientName: 'Rodrigo M.',
+                createdAt: Date.now() - 3600000 * 9
+            },
+            {
+                id: 'seed-4',
+                type: 'digital',
+                category: 'Diseño Gráfico',
+                title: 'Rediseño de identidad visual y plantillas para Instagram',
+                description: 'Emprendimiento de café de especialidad necesita logo vectorizado, paleta de colores y 10 plantillas editables.',
+                location: 'Remoto',
+                budget: '$ 6.500 UYU',
+                phone: '091 882 119',
+                clientName: 'Valeria T.',
+                createdAt: Date.now() - 3600000 * 14
+            },
+            {
+                id: 'seed-5',
+                type: 'hogar',
+                category: 'Fletes',
+                title: 'Flete chico dentro de Maldonado (heladera y sillón)',
+                description: 'Traslado de 4 km dentro de Maldonado centro. Requiere 2 personas para bajar por escalera un piso.',
+                location: 'Maldonado',
+                budget: '$ 2.200 UYU',
+                phone: '095 604 771',
+                clientName: 'Diego F.',
+                createdAt: Date.now() - 3600000 * 20
+            }
+        ];
+
+        const SEED_PROVIDERS = [
+            {
+                id: 'prov-1',
+                name: 'Sanitaria Integral Rodríguez',
+                specialty: 'Plomería y Sanitaria',
+                zone: 'Montevideo y Canelones',
+                verified: true,
+                pro: true,
+                rating: 4.9,
+                reviewsCount: 38,
+                bio: 'Más de 12 años resolviendo urgencias sanitarias, termofusión, desobstrucciones y colocación de calefones con garantía escrita.'
+            },
+            {
+                id: 'prov-2',
+                name: 'Nexo Digital Studio',
+                specialty: 'Desarrollo Web y E-commerce',
+                zone: 'Remoto / Todo Uruguay',
+                verified: true,
+                pro: true,
+                rating: 5.0,
+                reviewsCount: 24,
+                bio: 'Diseño y programación de sitios web rápidos, tiendas online con Mercado Pago y optimización SEO para pymes y profesionales.'
+            },
+            {
+                id: 'prov-3',
+                name: 'ElectroSafe UY',
+                specialty: 'Electricidad Residencial',
+                zone: 'Montevideo',
+                verified: true,
+                pro: false,
+                rating: 4.8,
+                reviewsCount: 19,
+                bio: 'Instalaciones eléctricas, tableros, aumento de carga UTE, iluminación LED y detección de cortocircuitos.'
+            }
+        ];
+
+        // Sanitización básica contra XSS
+        function sanitize(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str).trim();
+            return div.innerHTML;
+        }
+
+        // Sistema de Notificaciones Toast
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-emerald-900 text-white border-emerald-700',
+                error: 'bg-rose-900 text-white border-rose-700',
+                warning: 'bg-amber-900 text-white border-amber-700',
+                info: 'bg-slate-900 text-white border-slate-700'
+            };
+            const icons = {
+                success: 'check-circle',
+                error: 'alert-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto p-3.5 rounded-xl border shadow-xl flex items-start gap-2.5 text-xs font-medium transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                <span class="leading-snug">${sanitize(message)}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        };
+
+        // Inicialización de Firebase y Autenticación
+        async function initApp() {
+            state.requests = [...SEED_REQUESTS];
+            state.providers = [...SEED_PROVIDERS];
+            renderRequests();
+            renderProviders();
+
+            if (!firebaseConfig) {
+                console.warn("Firebase config no detectada; operando en modo demostración local.");
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseReady = true;
+
+                // Autenticación inicial obligatoria según reglas del entorno
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user && !user.isAnonymous) {
+                        state.currentUser = user;
+                        await loadUserProfile(user);
+                    } else if (user && user.isAnonymous) {
+                        // Usuario anónimo técnico para lectura pública de Firestore
+                        state.currentUser = null;
+                        state.userProfile = null;
+                        updateAuthUI();
+                    } else {
+                        state.currentUser = null;
+                        state.userProfile = null;
+                        updateAuthUI();
+                    }
+                    subscribeToPublicData();
+                });
+            } catch (err) {
+                console.error("Error inicializando Firebase:", err);
+            }
+        }
+
+        // Suscripción en tiempo real a solicitudes y prestadores públicos (Ruta estricta /artifacts/{appId}/public/data/...)
+        function subscribeToPublicData() {
+            if (!isFirebaseReady || !auth.currentUser) return;
+
+            const reqCol = collection(db, 'artifacts', appId, 'public', 'data', 'service_requests');
+            onSnapshot(reqCol, (snapshot) => {
+                const dbReqs = [];
+                snapshot.forEach((docSnap) => {
+                    dbReqs.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                // Ordenar en memoria (más recientes primero) y combinar con ejemplos iniciales
+                dbReqs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                state.requests = [...dbReqs, ...SEED_REQUESTS];
+                renderRequests();
+            }, (error) => {
+                console.error("Error escuchando solicitudes:", error);
+            });
+
+            const provCol = collection(db, 'artifacts', appId, 'public', 'data', 'public_providers');
+            onSnapshot(provCol, (snapshot) => {
+                const dbProvs = [];
+                snapshot.forEach((docSnap) => {
+                    dbProvs.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                state.providers = [...dbProvs, ...SEED_PROVIDERS];
+                renderProviders();
+            }, (error) => {
+                console.error("Error escuchando prestadores:", error);
+            });
+        }
+
+        // Cargar o crear perfil privado del usuario autenticado
+        async function loadUserProfile(user) {
+            if (!isFirebaseReady || !user) return;
+            const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
+            try {
+                const snap = await getDoc(profileRef);
+                if (snap.exists()) {
+                    state.userProfile = snap.data();
+                } else {
+                    // Perfil por defecto (ej. si ingresó con Google por primera vez)
+                    const defaultProfile = {
+                        uid: user.uid,
+                        name: user.displayName || user.email.split('@')[0],
+                        email: user.email,
+                        role: 'client',
+                        credits: 0,
+                        isPro: false,
+                        kycVerified: false,
+                        phoneVerified: false,
+                        unlockedIds: [],
+                        legalAcceptedAt: new Date().toISOString()
+                    };
+                    await setDoc(profileRef, defaultProfile);
+                    state.userProfile = defaultProfile;
+                }
+                updateAuthUI();
+                renderRequests();
+            } catch (err) {
+                console.error("Error cargando perfil:", err);
+            }
+        }
+
+        // Actualizar UI según sesión y rol
+        function updateAuthUI() {
+            const headerArea = document.getElementById('auth-header-area');
+            const dashboardBar = document.getElementById('user-dashboard-bar');
+            const providerControls = document.getElementById('provider-wallet-controls');
+
+            if (state.currentUser && state.userProfile) {
+                const p = state.userProfile;
+                headerArea.innerHTML = `
+                    <button onclick="switchTab('profile')" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition">
+                        <i data-lucide="user" class="w-4 h-4 text-brand-600"></i>
+                        <span class="hidden sm:inline">${sanitize(p.name)}</span>
+                    </button>
+                `;
+                dashboardBar.classList.remove('hidden');
+                document.getElementById('user-avatar-badge').textContent = (p.name || 'U').charAt(0).toUpperCase();
+                document.getElementById('user-display-name').textContent = p.name;
+                document.getElementById('user-role-badge').textContent = p.role === 'provider' ? 'Prestador de Servicios' : 'Cliente';
+
+                if (p.kycVerified) {
+                    document.getElementById('user-kyc-badge').classList.remove('hidden');
+                } else {
+                    document.getElementById('user-kyc-badge').classList.add('hidden');
+                }
+
+                if (p.role === 'provider') {
+                    providerControls.classList.remove('hidden');
+                    document.getElementById('wallet-credits-count').textContent = `${p.credits || 0} créditos`;
+                    if (p.isPro) {
+                        document.getElementById('wallet-pro-badge').classList.remove('hidden');
+                    } else {
+                        document.getElementById('wallet-pro-badge').classList.add('hidden');
+                    }
+                    document.getElementById('unlocked-history-card').classList.remove('hidden');
+                } else {
+                    providerControls.classList.add('hidden');
+                    document.getElementById('unlocked-history-card').classList.add('hidden');
+                }
+
+                // Actualizar vista de Perfil
+                document.getElementById('profile-uid-display').textContent = `ID: ${p.uid}`;
+                document.getElementById('profile-name-val').textContent = p.name;
+                document.getElementById('profile-email-val').textContent = p.email;
+                document.getElementById('profile-role-val').textContent = p.role === 'provider' ? 'Prestador (Hogar / Digital)' : 'Cliente';
+                document.getElementById('profile-phone-val').textContent = p.phoneVerified ? `Verificado (${p.phone || 'OK'})` : 'No verificado';
+                if (p.phoneVerified) {
+                    document.getElementById('btn-verify-phone').classList.add('hidden');
+                }
+                if (p.kycVerified) {
+                    document.getElementById('kyc-action-area').innerHTML = `
+                        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-xl">
+                            <i data-lucide="badge-check" class="w-4 h-4"></i> Identidad Validada (${sanitize(p.kycDoc || 'CI Verificada')})
+                        </span>
+                    `;
+                }
+                renderUnlockedHistory();
+            } else {
+                headerArea.innerHTML = `
+                    <button onclick="openAuthModal('login')" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition">
+                        Ingresar
+                    </button>
+                    <button onclick="openAuthModal('register')" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm">
+                        Crear Cuenta
+                    </button>
+                `;
+                dashboardBar.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        // Renderizado de Solicitudes de Servicios
+        window.renderRequests = function() {
+            const grid = document.getElementById('requests-grid');
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const typeFilter = document.getElementById('filter-type').value;
+            const locFilter = document.getElementById('filter-location').value;
+
+            const filtered = state.requests.filter(req => {
+                const matchSearch = !search ||
+                    req.title.toLowerCase().includes(search) ||
+                    req.description.toLowerCase().includes(search) ||
+                    req.category.toLowerCase().includes(search);
+                const matchType = typeFilter === 'all' || req.type === typeFilter;
+                const matchLoc = locFilter === 'all' || req.location === locFilter;
+                const matchQuickCat = !state.quickCategory || req.category === state.quickCategory;
+                return matchSearch && matchType && matchLoc && matchQuickCat;
+            });
+
+            document.getElementById('requests-counter').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white p-10 rounded-2xl border border-slate-200 text-center space-y-2">
+                        <p class="text-sm font-bold text-slate-800">No encontramos solicitudes con esos filtros</p>
+                        <p class="text-xs text-slate-500">Probá limpiar la búsqueda o publicá una nueva solicitud gratis.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const unlockedIds = state.userProfile?.unlockedIds || [];
+            const isPro = state.userProfile?.isPro || false;
+            const isProvider = state.userProfile?.role === 'provider';
+
+            grid.innerHTML = filtered.map(req => {
+                const isUnlocked = isProvider && (isPro || unlockedIds.includes(req.id));
+                const badgeColor = req.type === 'hogar'
+                    ? 'bg-sky-50 text-sky-700 border-sky-200'
+                    : 'bg-purple-50 text-purple-700 border-purple-200';
+                const typeLabel = req.type === 'hogar' ? '🏠 Hogar' : '💻 Digital';
+                const cleanPhone = (req.phone || '').replace(/\D/g, '');
+                const waNumber = cleanPhone.startsWith('0') ? '598' + cleanPhone.substring(1) : cleanPhone;
+
+                return `
+                    <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+                        <div class="space-y-2.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeColor}">
+                                    ${typeLabel} • ${sanitize(req.category)}
+                                </span>
+                                <span class="text-[11px] text-slate-400 flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3 h-3"></i> ${sanitize(req.location)}
+                                </span>
+                            </div>
+
+                            <h3 class="font-bold text-base text-slate-900 leading-snug">${sanitize(req.title)}</h3>
+                            <p class="text-xs text-slate-600 leading-relaxed line-clamp-3">${sanitize(req.description)}</p>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 space-y-3">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Cliente: <strong class="text-slate-700">${sanitize(req.clientName || 'Usuario')}</strong></span>
+                                <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">${sanitize(req.budget || 'A convenir')}</span>
+                            </div>
+
+                            ${isUnlocked ? `
+                                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="font-bold text-emerald-900 flex items-center gap-1">
+                                            <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Contacto Desbloqueado
+                                        </span>
+                                        <span class="font-mono font-bold text-emerald-800">${sanitize(req.phone)}</span>
+                                    </div>
+                                    <a href="https://wa.me/${waNumber}?text=${encodeURIComponent('Hola! Vi tu solicitud en ConectaUY: ' + req.title)}" target="_blank" rel="noopener" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Contactar por WhatsApp
+                                    </a>
+                                </div>
+                            ` : `
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
+                                    <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                        <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        <span>Tel: <strong>09X XXX XXX</strong></span>
+                                    </div>
+                                    <button onclick="unlockContact('${req.id}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-brand-600 text-white text-xs font-semibold transition flex items-center gap-1">
+                                        <i data-lucide="key" class="w-3 h-3"></i> Ver Contacto (1 cr.)
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+            lucide.createIcons();
+        };
+
+        // Renderizado de Directorio de Profesionales
+        function renderProviders() {
+            const grid = document.getElementById('providers-grid');
+            grid.innerHTML = state.providers.map(prov => `
+                <article class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between space-y-4">
+                    <div class="space-y-2.5">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h3 class="font-bold text-base text-slate-900">${sanitize(prov.name)}</h3>
+                                    ${prov.verified ? `<i data-lucide="badge-check" class="w-4 h-4 text-emerald-600" title="Identidad Verificada"></i>` : ''}
+                                </div>
+                                <p class="text-xs font-semibold text-brand-600">${sanitize(prov.specialty)}</p>
+                            </div>
+                            ${prov.pro ? `<span class="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md border border-amber-300">PRO</span>` : ''}
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">${sanitize(prov.bio)}</p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span class="text-slate-500 flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ${sanitize(prov.zone)}</span>
+                        <span class="font-bold text-amber-600 flex items-center gap-1">
+                            <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i> ${prov.rating || '5.0'} (${prov.reviewsCount || 1})
+                        </span>
+                    </div>
+                </article>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Desbloquear contacto con 1 crédito o plan Pro
+        window.unlockContact = async function(reqId) {
+            if (!state.currentUser || !state.userProfile) {
+                showToast('Ingresá o registrate como Prestador para desbloquear contactos.', 'warning');
+                openAuthModal('register', 'provider');
+                return;
+            }
+            if (state.userProfile.role !== 'provider') {
+                showToast('Esta función es exclusiva para cuentas de Prestadores de Servicios.', 'warning');
+                return;
+            }
+
+            const p = state.userProfile;
+            if (!p.isPro && (p.credits || 0) < 1) {
+                showToast('No tenés créditos suficientes. Recargá tu billetera para ver el teléfono.', 'warning');
+                openCreditsModal();
+                return;
+            }
+
+            try {
+                if (isFirebaseReady) {
+                    const profileRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'profile', 'main');
+                    const updates = {
+                        unlockedIds: arrayUnion(reqId)
+                    };
+                    if (!p.isPro) {
+                        updates.credits = increment(-1);
+                    }
+                    await updateDoc(profileRef, updates);
+                }
+
+                // Actualizar estado local inmediato
+                if (!p.unlockedIds) p.unlockedIds = [];
+                p.unlockedIds.push(reqId);
+                if (!p.isPro) p.credits = Math.max(0, (p.credits || 0) - 1);
+
+                updateAuthUI();
+                renderRequests();
+                showToast('¡Contacto desbloqueado! Ya podés escribirle por WhatsApp.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al procesar el desbloqueo. Intentá nuevamente.', 'error');
+            }
+        };
+
+        // Historial de contactos desbloqueados en Perfil
+        function renderUnlockedHistory() {
+            const container = document.getElementById('unlocked-list');
+            const ids = state.userProfile?.unlockedIds || [];
+            if (ids.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400">Aún no has desbloqueado datos de contacto de clientes.</p>`;
+                return;
+            }
+            const items = state.requests.filter(r => ids.includes(r.id));
+            container.innerHTML = items.map(r => `
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                    <div>
+                        <p class="font-bold text-xs text-slate-900">${sanitize(r.title)}</p>
+                        <p class="text-[11px] text-slate-500">${sanitize(r.clientName)} • ${sanitize(r.location)}</p>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">${sanitize(r.phone)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Validación en tiempo real de contraseña segura
+        window.checkPasswordStrength = function(pwd) {
+            const bar = document.getElementById('password-strength-bar');
+            const text = document.getElementById('password-strength-text');
+            let score = 0;
+            if (pwd.length >= 8) score++;
+            if (/[A-Z]/.test(pwd)) score++;
+            if (/[0-9]/.test(pwd)) score++;
+            if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+            const widths = ['w-0', 'w-1/4', 'w-2/4', 'w-3/4', 'w-full'];
+            const colors = ['bg-rose-500', 'bg-rose-500', 'bg-amber-500', 'bg-sky-500', 'bg-emerald-500'];
+            const labels = [
+                'Muy débil: agregá al menos 8 caracteres.',
+                'Débil: agregá mayúsculas y números.',
+                'Media: agregá un símbolo (!@#$%) para mayor seguridad.',
+                'Buena contraseña.',
+                'Excelente: contraseña altamente segura.'
+            ];
+
+            bar.className = `h-full transition-all duration-300 ${widths[score]} ${colors[score]}`;
+            text.textContent = labels[score];
+            return score >= 3;
+        };
+
+        // Envío de Formulario de Login / Registro
+        window.handleAuthSubmit = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+
+            if (state.authMode === 'register') {
+                const name = document.getElementById('auth-name').value.trim();
+                const consent = document.getElementById('auth-consent').checked;
+                const role = document.querySelector('input[name="role"]:checked').value;
+
+                if (!name) {
+                    showToast('Por favor ingresá tu nombre o razón social.', 'warning');
+                    return;
+                }
+                if (!checkPasswordStrength(password)) {
+                    showToast('La contraseña debe tener al menos 8 caracteres, mayúscula y número.', 'warning');
+                    return;
+                }
+                if (!consent) {
+                    showToast('Debés aceptar los Términos y la Política de Privacidad (Ley N.º 18.331) para continuar.', 'warning');
+                    return;
+                }
+
+                try {
+                    if (isFirebaseReady) {
+                        const cred = await createUserWithEmailAndPassword(auth, email, password);
+                        const newProfile = {
+                            uid: cred.user.uid,
+                            name: sanitize(name),
+                            email: sanitize(email),
+                            role: role,
+                            credits: role === 'provider' ? 2 : 0, // 2 créditos de bienvenida para probar
+                            isPro: false,
+                            kycVerified: false,
+                            phoneVerified: false,
+                            unlockedIds: [],
+                            specialty: role === 'provider' ? document.getElementById('auth-specialty').value : '',
+                            zone: role === 'provider' ? document.getElementById('auth-zone').value : '',
+                            legalAcceptedAt: new Date().toISOString()
+                        };
+                        await setDoc(doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile', 'main'), newProfile);
+
+                        // Si es prestador, publicarlo en el directorio público
+                        if (role === 'provider') {
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'public_providers', cred.user.uid), {
+                                name: newProfile.name,
+                                specialty: newProfile.specialty,
+                                zone: newProfile.zone,
+                                verified: false,
+                                pro: false,
+                                rating: 5.0,
+                                reviewsCount: 1,
+                                bio: 'Profesional registrado en ConectaUY. Disponible para presupuestos sin cargo.'
+                            });
+                        }
+
+                        state.currentUser = cred.user;
+                        state.userProfile = newProfile;
+                        updateAuthUI();
+                        closeModal('modal-auth');
+                        showToast(role === 'provider' ? '¡Cuenta creada! Te regalamos 2 créditos de bienvenida.' : '¡Cuenta de cliente creada con éxito!', 'success');
+                    }
+                } catch (err) {
+                    showToast('Error al registrar: ' + (err.message || 'verificá los datos'), 'error');
+                }
+            } else {
+                // Login
+                try {
+                    if (isFirebaseReady) {
+                        const cred = await signInWithEmailAndPassword(auth, email, password);
+                        state.currentUser = cred.user;
+                        await loadUserProfile(cred.user);
+                        closeModal('modal-auth');
+                        showToast('Sesión iniciada correctamente.', 'success');
+                    }
+                } catch (err) {
+                    showToast('Credenciales incorrectas o usuario no encontrado.', 'error');
+                }
+            }
+        };
+
+        // Google Sign-In
+        window.handleGoogleSignIn = async function() {
+            if (!isFirebaseReady) return;
+            try {
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                state.currentUser = result.user;
+                await loadUserProfile(result.user);
+                closeModal('modal-auth');
+                showToast('Conectado con Google correctamente.', 'success');
+            } catch (err) {
+                showToast('No se pudo completar el inicio con Google en este entorno.', 'warning');
+            }
+        };
+
+        window.handleLogout = async function() {
+            if (isFirebaseReady) {
+                await signOut(auth);
+                await signInAnonymously(auth);
+            }
+            state.currentUser = null;
+            state.userProfile = null;
+            switchTab('explore');
+            updateAuthUI();
+            showToast('Sesión cerrada de forma segura.', 'info');
+        };
+
+        // Crear nueva solicitud de servicio
+        window.handleCreateRequest = async function(e) {
+            e.preventDefault();
+            const newReq = {
+                type: document.getElementById('req-type').value,
+                category: document.getElementById('req-category').value,
+                title: sanitize(document.getElementById('req-title').value),
+                description: sanitize(document.getElementById('req-desc').value),
+                location: document.getElementById('req-location').value,
+                budget: sanitize(document.getElementById('req-budget').value) || 'A convenir',
+                phone: sanitize(document.getElementById('req-phone').value),
+                clientName: state.userProfile?.name || 'Cliente Verificado',
+                createdAt: Date.now()
+            };
+
+            try {
+                if (isFirebaseReady && auth.currentUser) {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'service_requests'), newReq);
+                } else {
+                    newReq.id = 'local-' + Date.now();
+                    state.requests.unshift(newReq);
+                    renderRequests();
+                }
+                closeModal('modal-new-request');
+                e.target.reset();
+                showToast('¡Solicitud publicada! Los prestadores ya pueden verla y desbloquear tu contacto.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al publicar la solicitud.', 'error');
+            }
+        };
+
+        // Flujo de Checkout de Créditos / Suscripción Pro (Listo para conectar Webhook de Mercado Pago)
+        window.processCheckout = async function(planName, amountUYU, creditsToAdd, activatePro) {
+            if (!state.currentUser || !state.userProfile) {
+                showToast('Iniciá sesión como Prestador para recargar saldo.', 'warning');
+                return;
+            }
+
+            showToast(`Conectando con pasarela de pago segura (${planName} - $${amountUYU} UYU)...`, 'info');
+
+            try {
+                if (isFirebaseReady) {
+                    const profileRef = doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'profile', 'main');
+                    const updates = {};
+                    if (creditsToAdd > 0) updates.credits = increment(creditsToAdd);
+                    if (activatePro) updates.isPro = true;
+
+                    await updateDoc(profileRef, updates);
+
+                    // Registrar transacción en historial privado
+                    await addDoc(collection(db, 'artifacts', appId, 'users', state.currentUser.uid, 'transactions'), {
+                        plan: planName,
+                        amountUYU,
+                        creditsAdded: creditsToAdd,
+                        proActivated: activatePro,
+                        status: 'approved',
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+                if (creditsToAdd > 0) state.userProfile.credits = (state.userProfile.credits || 0) + creditsToAdd;
+                if (activatePro) state.userProfile.isPro = true;
+
+                updateAuthUI();
+                renderRequests();
+                closeModal('modal-credits');
+                showToast(`¡Pago acreditado! Se activó: ${planName}.`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al acreditar el saldo.', 'error');
+            }
+        };
+
+        // Verificación KYC de Cédula
+        window.submitKycVerification = async function() {
+            const docVal = document.getElementById('kyc-doc-number').value.trim();
+            if (docVal.length < 6) {
+                showToast('Ingresá un número de documento válido.', 'warning');
+                return;
+            }
+            if (!state.currentUser || !state.userProfile) return;
+
+            try {
+                if (isFirebaseReady) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'profile', 'main'), {
+                        kycVerified: true,
+                        kycDoc: sanitize(docVal)
+                    });
+                    if (state.userProfile.role === 'provider') {
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'public_providers', state.currentUser.uid), {
+                            verified: true
+                        });
+                    }
+                }
+                state.userProfile.kycVerified = true;
+                state.userProfile.kycDoc = sanitize(docVal);
+                updateAuthUI();
+                showToast('¡Identidad verificada! Tu insignia ya es visible para generar mayor confianza.', 'success');
+            } catch (err) {
+                showToast('No se pudo completar la verificación.', 'error');
+            }
+        };
+
+        // Verificación SMS (OTP)
+        window.handlePhoneVerificationStep = async function() {
+            if (state.phoneVerifyStep === 1) {
+                const phone = document.getElementById('phone-input-verify').value.trim();
+                if (phone.length < 8) {
+                    showToast('Ingresá un celular válido (ej. 099 123 456).', 'warning');
+                    return;
+                }
+                state.phoneVerifyStep = 2;
+                document.getElementById('otp-step-2').classList.remove('hidden');
+                document.getElementById('btn-phone-step').textContent = 'Confirmar Código';
+                showToast('Código SMS enviado a tu celular.', 'info');
+            } else {
+                const code = document.getElementById('otp-code-input').value.trim();
+                if (code !== '123456') {
+                    showToast('Código incorrecto. Para esta prueba ingresá 123456.', 'error');
+                    return;
+                }
+                const phone = sanitize(document.getElementById('phone-input-verify').value);
+                if (isFirebaseReady && state.currentUser) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', state.currentUser.uid, 'profile', 'main'), {
+                        phoneVerified: true,
+                        phone: phone
+                    });
+                }
+                state.userProfile.phoneVerified = true;
+                state.userProfile.phone = phone;
+                state.phoneVerifyStep = 1;
+                updateAuthUI();
+                closeModal('modal-phone');
+                showToast('¡Teléfono verificado por SMS!', 'success');
+            }
+        };
+
+        // Derechos ARCO: Exportar datos personales (Ley 18.331)
+        window.exportUserData = function() {
+            if (!state.userProfile) return;
+            const dataStr = JSON.stringify(state.userProfile, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mis-datos-conectauy-${state.userProfile.uid}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Archivo JSON descargado con todos tus datos personales almacenados.', 'success');
+        };
+
+        // Derechos ARCO: Eliminación total de cuenta y datos
+        window.executeAccountDeletion = async function() {
+            if (!state.currentUser) return;
+            try {
+                if (isFirebaseReady) {
+                    const uid = state.currentUser.uid;
+                    await deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'profile', 'main'));
+                    if (state.userProfile?.role === 'provider') {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'public_providers', uid));
+                    }
+                    await deleteUser(state.currentUser);
+                    await signInAnonymously(auth);
+                }
+                state.currentUser = null;
+                state.userProfile = null;
+                closeModal('modal-delete-account');
+                switchTab('explore');
+                updateAuthUI();
+                showToast('Tu cuenta y datos personales fueron eliminados definitivamente.', 'info');
+            } catch (err) {
+                showToast('Por seguridad, cerrá sesión y volvé a ingresar antes de eliminar la cuenta.', 'warning');
+            }
+        };
+
+        // Navegación entre pestañas y modales
+        window.switchTab = function(tabName) {
+            ['explore', 'providers', 'profile'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.setQuickCategory = function(cat) {
+            state.quickCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if ((cat === '' && btn.textContent.trim() === 'Todas') || btn.textContent.includes(cat)) {
+                    btn.className = 'cat-pill px-3 py-1.5 rounded-lg bg-slate-900 text-white font-medium whitespace-nowrap';
+                } else {
+                    btn.className = 'cat-pill px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium whitespace-nowrap';
+                }
+            });
+            renderRequests();
+        };
+
+        window.updateCategoryOptions = function() {
+            const type = document.getElementById('req-type').value;
+            const catSelect = document.getElementById('req-category');
+            const options = type === 'hogar'
+                ? ['Plomería', 'Electricidad', 'Limpieza', 'Albañilería', 'Fletes', 'Cerrajería']
+                : ['Desarrollo Web', 'Diseño Gráfico', 'Marketing', 'Edición de Video', 'Clases Online', 'Contabilidad'];
+            catSelect.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
+        };
+
+        window.openAuthModal = function(mode = 'register', defaultRole = 'client') {
+            setAuthMode(mode);
+            if (defaultRole === 'provider') {
+                document.querySelector('input[name="role"][value="provider"]').checked = true;
+                toggleProviderFields();
+            }
+            document.getElementById('modal-auth').classList.remove('hidden');
+        };
+
+        window.setAuthMode = function(mode) {
+            state.authMode = mode;
+            const isReg = mode === 'register';
+            document.getElementById('auth-modal-title').textContent = isReg ? 'Crear Cuenta Segura' : 'Ingresar a ConectaUY';
+            document.getElementById('register-fields').classList.toggle('hidden', !isReg);
+            document.getElementById('legal-consent-box').classList.toggle('hidden', !isReg);
+            document.getElementById('password-strength-box').classList.toggle('hidden', !isReg);
+            document.getElementById('auth-submit-btn').textContent = isReg ? 'Crear Cuenta Segura' : 'Iniciar Sesión';
+
+            document.getElementById('tab-btn-register').className = isReg ? 'py-2 rounded-lg bg-white text-slate-900 shadow-sm transition' : 'py-2 rounded-lg text-slate-600 transition';
+            document.getElementById('tab-btn-login').className = !isReg ? 'py-2 rounded-lg bg-white text-slate-900 shadow-sm transition' : 'py-2 rounded-lg text-slate-600 transition';
+        };
+
+        window.toggleProviderFields = function() {
+            const role = document.querySelector('input[name="role"]:checked').value;
+            document.getElementById('provider-extra-fields').classList.toggle('hidden', role !== 'provider');
+        };
+
+        window.openNewRequestModal = function() {
+            document.getElementById('modal-new-request').classList.remove('hidden');
+        };
+
+        window.openCreditsModal = function() {
+            document.getElementById('modal-credits').classList.remove('hidden');
+        };
+
+        window.openPhoneVerifyModal = function() {
+            document.getElementById('modal-phone').classList.remove('hidden');
+        };
+
+        window.openDeleteAccountModal = function() {
+            document.getElementById('modal-delete-account').classList.remove('hidden');
+        };
+
+        window.closeModal = function(id) {
+            document.getElementById(id).classList.add('hidden');
+        };
+
+        window.acceptCookies = function() {
+            document.getElementById('cookie-banner').classList.add('hidden');
+        };
+
+        // Documentos Legales Integrados (Uruguay)
+        window.openLegalModal = function(docType) {
+            const title = document.getElementById('legal-modal-title');
+            const body = document.getElementById('legal-modal-body');
+
+            if (docType === 'terms') {
+                title.textContent = 'Términos y Condiciones — Deslinde de Responsabilidad';
+                body.innerHTML = `
+                    <p><strong>1. NATURALEZA DEL SERVICIO (INTERMEDIACIÓN TECNOLÓGICA):</strong> ConectaUY es una plataforma digital de clasificados y contacto que facilita la vinculación entre usuarios que requieren servicios físicos al hogar o digitales ("Clientes") y trabajadores independientes o empresas ("Prestadores").</p>
+                    <p><strong>2. AUSENCIA DE RELACIÓN LABORAL Y NO INTERMEDIACIÓN EN PAGOS:</strong> ConectaUY no presta los servicios publicados, no fija sus precios finales ni interviene en el cobro o pago de los mismos. Los Prestadores actúan por cuenta y riesgo propio, sin existir relación de dependencia laboral, sociedad, mandato ni representación con la plataforma.</p>
+                    <p><strong>3. EXONERACIÓN Y DESLINDE DE RESPONSABILIDAD CIVIL:</strong> El Cliente y el Prestador acuerdan directamente las condiciones, presupuestos, garantías y medidas de seguridad del trabajo. ConectaUY no se responsabiliza por daños materiales, hurtos, accidentes personales, incumplimientos de plazos o mala praxis ocurridos durante la ejecución de servicios a domicilio o remotos.</p>
+                    <p><strong>4. VERIFICACIÓN DE IDENTIDAD:</strong> Las insignias de "Identidad Verificada" indican únicamente que el Prestador ha aportado documentación identificatoria básica al momento del registro, lo cual no constituye una garantía ni certificación profesional estatal.</p>
+                    <p><strong>5. MONETIZACIÓN Y CRÉDITOS:</strong> Los paquetes de créditos y suscripciones adquiridos por los Prestadores habilitan únicamente el acceso a los datos de contacto publicados por los Clientes y no garantizan la concreción efectiva del trabajo ni son reembolsables una vez utilizado el crédito.</p>
+                    <p><strong>6. JURISDICCIÓN Y LEY APLICABLE:</strong> Estos términos se rigen por las leyes de la República Oriental del Uruguay (incluyendo la Ley N.º 17.250 de Relaciones de Consumo en lo que resulte aplicable), sometiéndose las partes a los tribunales competentes de la ciudad de Montevideo.</p>
+                `;
+            } else if (docType === 'privacy') {
+                title.textContent = 'Política de Privacidad y Protección de Datos (Ley N.º 18.331)';
+                body.innerHTML = `
+                    <p><strong>1. RESPONSABLE DE LA BASE DE DATOS:</strong> ConectaUY garantiza la confidencialidad y seguridad de los datos personales recabados, en estricto cumplimiento de la Ley N.º 18.331 de Protección de Datos Personales y Acción de Habeas Data de Uruguay y su Decreto Reglamentario N.º 414/009.</p>
+                    <p><strong>2. FINALIDAD DEL TRATAMIENTO:</strong> Los datos solicitados (nombre, correo electrónico, teléfono y documentación verificatoria) se utilizan exclusivamente para gestionar las cuentas de usuario, permitir el contacto solicitado entre Clientes y Prestadores y prevenir fraudes.</p>
+                    <p><strong>3. PROTECCIÓN DE DATOS DE CONTACTO:</strong> El número telefónico de los Clientes permanece oculto al público general y solo se revela a Prestadores registrados que utilicen sus créditos habilitados.</p>
+                    <p><strong>4. SEGURIDAD Y NO ALMACENAMIENTO DE TARJETAS:</strong> Las comunicaciones operan bajo cifrado TLS/HTTPS. Los pagos de suscripciones o créditos se procesan mediante pasarelas certificadas (PCI-DSS); ConectaUY jamás almacena números de tarjetas de crédito o débito.</p>
+                    <p><strong>5. DERECHOS ARCO (ACCESO, RECTIFICACIÓN, CANCELACIÓN Y OPOSICIÓN):</strong> El titular de los datos podrá ejercer sus derechos de acceso, rectificación, actualización, inclusión o supresión de forma gratuita e inmediata desde la sección <em>"Mi Perfil y Privacidad"</em> de esta plataforma, o ante la Unidad Reguladora y de Control de Datos Personales (URCDP).</p>
+                `;
+            } else {
+                title.textContent = 'Guía de Seguridad para Servicios a Domicilio';
+                body.innerHTML = `
+                    <p><strong>Recomendaciones para Clientes:</strong></p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Priorizá prestadores que cuenten con la insignia de <strong>Identidad Verificada</strong> y reseñas previas.</li>
+                        <li>Confirmá por WhatsApp el nombre completo y número de cédula de la persona que concurrirá al domicilio antes de abrir la puerta.</li>
+                        <li>Acordá el presupuesto por escrito (mensaje) antes de iniciar el trabajo y evitá adelantar dinero por materiales sin comprobante.</li>
+                    </ul>
+                    <p class="pt-2"><strong>Recomendaciones para Prestadores:</strong></p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Verificá la dirección y detalles del trabajo antes de trasladarte.</li>
+                        <li>Emití siempre tu boleta o factura correspondiente por el servicio prestado directamente al cliente.</li>
+                    </ul>
+                `;
+            }
+            document.getElementById('modal-legal').classList.remove('hidden');
+        };
+
+        // Arrancar aplicación
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initApp();
+        });
+    </script>
+</body>
+</html>
